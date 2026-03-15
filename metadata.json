@@ -1,0 +1,7 @@
+{
+  "name": "Grade 1 Smart Tutor",
+  "description": "A friendly, interactive AI tutor for Grade 1 students, helping with Math, English, and Science with visual aids and simplified explanations.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
