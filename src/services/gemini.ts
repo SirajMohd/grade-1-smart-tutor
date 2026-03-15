@@ -1,12 +1,23 @@
 import { GoogleGenAI, GenerateContentResponse, Modality, LiveServerMessage } from "@google/genai";
 
-const apiKey = process.env.GEMINI_API_KEY || "";
-const vertexDatastore = process.env.VERTEX_DATASTORE;
-if (!vertexDatastore) {
-  throw new Error("Missing required environment variable VERTEX_DATASTORE. Please set it in .env or your deployment environment.");
-}
+const getSettings = () => {
+  return {
+    apiKey: process.env.GEMINI_API_KEY,
+    projectId: process.env.PROJECT_ID,
+    datastoreId: process.env.DATASTORE_ID,
+    location: process.env.LOCATION,
+    collectionId: process.env.COLLECTION_ID
+  };
+};
 
-const ai = new GoogleGenAI({ apiKey });
+
+  const settings = getSettings();
+
+  if (!settings.apiKey) {
+    throw new Error("No API Key found. Please add one in Settings (top right)! 🔑");
+  }
+
+const ai = new GoogleGenAI({ apiKey: settings.apiKey });
 
 export interface ChatMessage {
   role: "user" | "model";
@@ -16,7 +27,6 @@ export interface ChatMessage {
 
 export async function getTutorResponse(message: string, history: ChatMessage[]) {
   const model = "gemini-3-flash-preview";
-  
   const contents = history.map(msg => ({
     role: msg.role,
     parts: [{ text: msg.text }]
@@ -35,12 +45,14 @@ export async function getTutorResponse(message: string, history: ChatMessage[]) 
       model,
       contents,
       config: {
-        systemInstruction: "You are a Grade 1 Teacher. Use ONLY the NCERT textbooks in your datastore to answer. Use the exact examples from the books. If the book has a picture or illustration for the topic, describe it and mention if a clip is available in the source. If the answer isn't there, say you don't know. End with a source citation.",
-        tools: [{ 
-          vertexAiSearch: {
-            datastore: vertexDatastore,
-          } 
-        }] as any[],
+        systemInstruction: "You are a Grade 1 Teacher. You MUST use the search tool to answer from NCERT books. If you cannot find the books, explain that you are looking for them in the library.",
+        tools: [
+          { 
+            vertexAiSearch: {
+              datastore: `projects/${settings.projectId}/locations/${settings.location}/collections/${settings.collectionId}/dataStores/${settings.datastoreId}`
+            }
+          }
+        ] as any[],
         safetySettings: [
           { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
           { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
@@ -109,7 +121,7 @@ export function connectToLiveTutor(callbacks: LiveSessionCallbacks) {
       systemInstruction: "You are a Grade 1 Teacher. You are in a live conversation with a child. Use ONLY the NCERT textbooks in your datastore to answer. Keep your answers very short, simple, and friendly. Encourage the child. If the answer isn't in the textbooks, say you don't know. If you hear the child interrupt, stop talking immediately.",
       tools: [{ 
         vertexAiSearch: {
-          datastore: vertexDatastore,
+          datastore:  `projects/${settings.projectId}/locations/${settings.location}/collections/${settings.collectionId}/dataStores/${settings.datastoreId}`
         } 
       }] as any[],
       inputAudioTranscription: {},
